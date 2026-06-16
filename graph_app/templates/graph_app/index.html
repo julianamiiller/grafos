@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dijkstra — Caminho Mais Curto</title>
+    <meta name="description" content="Demonstração interativa do Algoritmo de Dijkstra para grafos ponderados. Ferramenta educacional universitária.">
+    {% load static %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'graph_app/css/styles.css' %}?v=3">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+</head>
+<body>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+    <header class="site-header">
+        <div class="header-inner">
+            <h1 class="site-title">
+                Algoritmo de <span class="gradient-text">Dijkstra</span>
+            </h1>
+            <p class="site-subtitle">Demonstração Interativa do Caminho Mais Curto em Grafos Ponderados</p>
+        </div>
+    </header>
+    <main class="main-layout">
+        <aside class="sidebar">
+            <div class="glass-card">
+                <div class="card-header">
+                    <div class="card-icon icon-route">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+                    </div>
+                    <h2>Calcular Rota</h2>
+                </div>
+                <form id="route-form" autocomplete="off">
+                    <div class="field-group">
+                        <label for="source">
+                            <span class="label-dot dot-green"></span>Origem
+                        </label>
+                        <div class="select-wrap">
+                            <select id="source" name="source" required>
+                                <option value="" disabled selected>Selecione o ponto de partida</option>
+                                {% for node in nodes %}
+                                    <option value="{{ node }}">{{ node }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="route-arrow">
+                        <div class="arrow-line"></div>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+                    </div>
+                    <div class="field-group">
+                        <label for="target">
+                            <span class="label-dot dot-red"></span>Destino
+                        </label>
+                        <div class="select-wrap">
+                            <select id="target" name="target" required>
+                                <option value="" disabled selected>Selecione o ponto de chegada</option>
+                                {% for node in nodes %}
+                                    <option value="{{ node }}">{{ node }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-calc" id="calc-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Executar
+                    </button>
+                </form>
+            </div>
+            <div class="glass-card result-card hidden" id="result-card">
+                <div class="card-header">
+                    <div class="card-icon icon-result">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <h2>Resultado</h2>
+                </div>
+                <div class="result-metrics">
+                    <div class="metric">
+                        <span class="metric-val" id="res-distance">—</span>
+                        <span class="metric-label">Distância Total</span>
+                    </div>
+                    <div class="metric-divider"></div>
+                    <div class="metric">
+                        <span class="metric-val" id="res-hops">—</span>
+                        <span class="metric-label">Vértices</span>
+                    </div>
+                    <div class="metric-divider"></div>
+                    <div class="metric">
+                        <span class="metric-val algo-badge">Dijkstra</span>
+                        <span class="metric-label">Algoritmo</span>
+                    </div>
+                </div>
+                <div class="route-display">
+                    <span class="route-label">Caminho Encontrado</span>
+                    <div class="route-nodes" id="res-path"></div>
+                </div>
+            </div>
+            <div class="glass-card legend-card">
+                <div class="card-header">
+                    <div class="card-icon icon-info">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                    <h2>Legenda</h2>
+                </div>
+                <ul class="legend-list">
+                    <li><span class="legend-dot" style="background:#2dd4bf;box-shadow:0 0 8px #2dd4bf88"></span>Vértice padrão</li>
+                    <li><span class="legend-dot" style="background:#f43f5e;box-shadow:0 0 8px #f43f5e88"></span>Analisando agora</li>
+                    <li><span class="legend-dot" style="background:#6366f1;box-shadow:0 0 8px #6366f188"></span>Já visitado</li>
+                    <li><span class="legend-dot" style="background:#facc15;box-shadow:0 0 12px #facc1588"></span>Caminho mínimo</li>
+                    <li>
+                        <span class="legend-line" style="background:rgba(255,255,255,0.15)"></span>
+                        Aresta padrão
+                    </li>
+                    <li>
+                        <span class="legend-line" style="background:#facc15;box-shadow:0 0 6px #facc1566"></span>
+                        Aresta do caminho
+                    </li>
+                </ul>
+            </div>
+        </aside>
+        <section class="center-panel">
+            <div class="glass-card graph-card">
+                <div class="card-header graph-header">
+                    <div class="card-icon icon-graph">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                    </div>
+                    <h2>Visualização do Grafo</h2>
+                    <span class="graph-subtitle">Rede de Bairros — Maricá, RJ</span>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="graph-canvas"></canvas>
+                    <div class="canvas-hint" id="canvas-hint">Selecione origem e destino para iniciar</div>
+                </div>
+            </div>
+            <div class="glass-card steps-card hidden" id="steps-card">
+                <div class="card-header">
+                    <div class="card-icon icon-steps">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    </div>
+                    <h2>Execução Passo a Passo</h2>
+                    <span class="step-counter" id="step-counter">—</span>
+                </div>
+                <div class="table-scroll">
+                    <table class="steps-table">
+                        <thead><tr id="dt-head"></tr></thead>
+                        <tbody id="dt-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+    <footer class="site-footer">
+        <p>Demonstração acadêmica · Algoritmo de Dijkstra · Teoria dos Grafos</p>
+    </footer>
+    <section class="fundamentos-section">
+        <div class="fund-inner">
+            <div class="fund-title-row">
+                <div class="card-icon icon-book" style="width:34px;height:34px">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                </div>
+                <h2 class="fund-heading">Fundamentos Teóricos</h2>
+            </div>
+            <div class="fund-grid">
+                <div class="theory-block">
+                    <h3><span class="t-icon">G</span>Grafo</h3>
+                    <p>Estrutura matemática <strong>G = (V, E)</strong> composta por um conjunto de vértices <em>V</em> e arestas <em>E</em> que representam relações entre eles.</p>
+                </div>
+                <div class="theory-block">
+                    <h3><span class="t-icon">V</span>Vértice</h3>
+                    <p>Nó fundamental do grafo. Nesta demonstração, cada vértice representa um <strong>bairro</strong> da cidade de Maricá, RJ.</p>
+                </div>
+                <div class="theory-block">
+                    <h3><span class="t-icon">E</span>Aresta</h3>
+                    <p>Conexão entre dois vértices. Aqui representam as <strong>estradas</strong> que ligam os bairros e possuem um peso associado.</p>
+                </div>
+                <div class="theory-block">
+                    <h3><span class="t-icon">W</span>Peso</h3>
+                    <p>Valor numérico associado à aresta. Neste grafo, o peso indica a <strong>distância em km</strong> entre dois bairros adjacentes.</p>
+                </div>
+                <div class="theory-block theory-main" style="grid-column: span 2;">
+                    <h3><span class="t-icon">D</span>Algoritmo de Dijkstra</h3>
+                    <p>Criado por <strong>Edsger W. Dijkstra (1956)</strong>, o algoritmo encontra o caminho de menor custo a partir de um vértice origem para todos os outros em um grafo com pesos não-negativos.</p>
+                    <div class="complexity-box" style="margin-top:0.75rem">
+                        <span>Complexidade com fila de prioridade</span>
+                        <code>O((V + E) log V)</code>
+                    </div>
+                    <ol class="algo-steps" style="margin-top:0.75rem">
+                        <li>Inicializa distâncias: origem = 0, demais = ∞</li>
+                        <li>Insere origem na fila de prioridade (min-heap)</li>
+                        <li>Extrai o vértice de menor distância acumulada</li>
+                        <li>Relaxa as arestas de todos os vizinhos</li>
+                        <li>Repete até atingir o destino ou esvaziar a fila</li>
+                    </ol>
+                </div>
+                <div class="theory-block apps-block">
+                    <h3><span class="t-icon">↗</span>Aplicações Reais</h3>
+                    <div class="app-tags">
+                        <span>Google Maps</span>
+                        <span>GPS / Waze</span>
+                        <span>Redes IP (OSPF)</span>
+                        <span>Jogos (IA)</span>
+                        <span>Robótica</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <script id="graph-data" type="application/json">{{ graph_json|safe }}</script>
+    <script src="{% static 'graph_app/js/main.js' %}?v=3"></script>
+    <footer class="site-footer">
+        <p style="margin-top: 0.5rem; font-size: 0.85rem; color: #94a3b8;">Juliana Miiller, Breno Quadros, Bernardo Rocha, Sandy Mendes, Igor Borges e Richard William</p>
+    </footer>
+</body>
+</html>
